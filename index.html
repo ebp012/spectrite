@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Algebra Plane Engine v2</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+<style>
+html,body{
+    margin:0;
+    height:100%;
+    overflow:hidden;
+    background:#0b0e14;
+    font-family:monospace;
+    z-index: -999999;
+}
+  body{touch-action: none;}
+
+.o-bar{
+    position:absolute;
+    top:0; left:0; right:0;
+    height:70px;
+    background:#121826;
+    background:#12182680;
+    backdrop-filter: url(#crystal-distortion-minus) blur(4px);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px;
+    color:#9fb3ff;
+    z-index: 99;
+}
+
+.o-bar input{
+    width:140px;
+    background:#1c2433;
+    border:1px solid #2c3a55;
+    color:#d7e1ff;
+}
+
+.o-wrap{
+    position:absolute;
+    top:70px; bottom:0; left:0; right:0;
+}
+
+canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
+  
+.ribbon-tabs{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:30px;
+    background:#0f1420;
+    background:#0f1420a0;
+    backdrop-filter: blur(9px) sepia(0.1) url(#crystal-distortion-plus);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 8px;
+    border-bottom:1px solid #2c3a55;
+    color:#9fb3ff;
+    font-size:12px;
+    z-index: 100;
+}
+
+.ribbon-tab{
+    padding:4px 10px;
+    cursor:pointer;
+    border-radius:4px;
+    user-select:none;
+    opacity:0.7;
+}
+
+.ribbon-tab.active{
+    background:#1c2433;
+    opacity:1;
+}
+
+.page{
+    position:absolute;
+    top:30px;
+    left:0;
+    right:0;
+    height:70px;
+    display:none;
+}
+.page.active{
+    display:flex;
+}
+</style>
+</head>
+
+<body>
+<svg style="position: absolute; width: 0; height: 0;" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="crystal-distortion">
+      <feTurbulence baseFrequency="0.008" numOctaves="2" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="9"/>
+    </filter>
+    <filter id="crystal-distortion-plus">
+      <feTurbulence baseFrequency="0.008" numOctaves="2" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="72"/>
+      <feColorMatrix type="saturate" values="1.05"/>
+    </filter>
+    <filter id="crystal-distortion-minus">
+      <feTurbulence baseFrequency="0.008" numOctaves="2" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="24"/>
+      <feColorMatrix type="saturate" values="1.05"/>
+    </filter>
+  </defs>
+</svg>
+<div class="ribbon-tabs">
+    <div class="ribbon-tab active" data-page="home">Functions</div>
+    <div class="ribbon-tab" data-page="p1">Viewport</div>
+    <div class="ribbon-tab" data-page="p2">Transformations</div>
+    <div class="ribbon-tab" data-page="p3">Complex Algebras</div>
+</div>
+
+<!-- HOME PAGE (your old toolbar) -->
+<div class="o-bar page active" id="home">
+    <div>f(x,y)=0</div>
+    <input id="eq" value="y - x^2">
+    <button onclick="addEquation()">add</button>
+</div>
+
+<!-- Viewport (just scale+rotation for now lol) -->
+<div class="o-bar page" id="p1">
+  <div>scale</div>
+  <input id="scalein" value="60" type='number' min='0'>
+  
+  <div>rotation</div>
+  <input id="rotatein" value="0" min='-360' max='360' type='number' min='0'>°
+</div>
+  
+<!-- Transformations (with matrices!) -->
+<div class="o-bar page" id="p2">
+  asdf
+</div>
+  
+<!-- Algebras over the Real Numbers -->
+<div class="o-bar page" id="p3">
+  <div id='jLabel' style='cursor: pointer'>j = √(a+bi)</div>
+  <input id="a" value="-1">
+  <input id="b" value="0">
+  
+  <label for='expr'><div>expr z =</div></label>
+  <input id="expr" value="1 + j">
+  
+  <label for='param'><div>param</div></label>
+  <input id="param" value="cos(t), sin(t)">
+</div>
+  
+<div id="algebraPanel" style="
+    position:absolute;
+    top:70px;
+    left:10px;
+    width:260px;
+    max-height:60vh;
+    overflow:auto;
+    background:#121826;
+    border:1px solid #2c3a55;
+    color:#d7e1ff;
+    padding:10px;
+    display:none;
+    font-family:monospace;
+">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b>Algebra Rules</b>
+        <button id="addRuleBtn">+</button>
+    </div>
+
+    <div id="rules"></div>
+</div>
+<div id='canvaswrapper' style='position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;'>
+<canvas id="c" style='z-index:-10000;'></canvas>
+  </div>
+  <!-- Regular function graphing -->
+  <script>
+    let equations = [];
+
+function addEquation(){
+  let raw = document.getElementById("eq").value.trim();
+  if(!raw) return;
+
+  equations.push({
+    raw,
+    node: math.parse(raw).compile(),
+    index: 0,
+    done: false
+  });
+}
+
+function F(eqObj, x, y){
+  try {
+    return eqObj.node.evaluate({ x, y });
+  } catch {
+    return NaN;
+  }
+}
+const buffer = document.createElement("canvas");
+const bctx = buffer.getContext("2d");
+
+function resizeBuffer(){
+  buffer.width = c.width;
+  buffer.height = c.height;
+}
+resizeBuffer();
+window.addEventListener("resize", resizeBuffer);
+function drawImplicit(eq){
+
+  let scale = S() * cam.z;
+
+  let left   = cam.x - (c.width / 2) / scale;
+  let right  = cam.x + (c.width / 2) / scale;
+  let top    = cam.y + (c.height / 2) / scale;
+  let bottom = cam.y - (c.height / 2) / scale;
+
+  let step = niceStep(1 / scale) * 0.5;
+
+  let cols = Math.ceil((right - left) / step);
+  let rows = Math.ceil((top - bottom) / step);
+
+  let total = cols * rows;
+  let chunk = 800;
+
+  let i = eq.index;
+
+  for(let k = 0; k < chunk && i < total; k++, i++){
+
+    let xIndex = i % cols;
+    let yIndex = (i / cols) | 0;
+
+    let x = left + xIndex * step;
+    let y = bottom + yIndex * step;
+
+    let f  = F(eq, x, y);
+    let fx = F(eq, x + step, y);
+    let fy = F(eq, x, y + step);
+
+    if(!isFinite(f)) continue;
+
+    // TRUE zero crossing (cleaner than sign spam)
+    let hit =
+      Math.abs(f) < step ||
+      (f * fx < 0) ||
+      (f * fy < 0);
+
+    if(hit){
+      let p = toScreen(x, y);
+
+      // draw into buffer, not directly
+      bctx.fillStyle = "#ffcc66";
+      bctx.fillRect(p.x, p.y, 1, 1);
+    }
+  }
+
+  eq.index = i;
+
+  if(eq.index >= total){
+    eq.index = 0;
+  }
+}
+  </script>
+<!-- Real and complex number algebras -->
+<script>
+// convenience
+const qs = s => document.querySelector(s);
+const qg = s => document.getElementById(s);
+const qsa = s => document.querySelectorAll(s);
+// actually do canvassing stuff
+const c=qg("c");
+const ctx=c.getContext("2d");
+
+function resize(){
+    c.width=innerWidth;
+    c.height=innerHeight; // originally innerHeight-70
+}
+addEventListener("resize",resize);
+resize();
+  
+// ================= CAMERA =================
+let cam = { x: 0, y: 0, z: 1 };
+let vel = { x: 0, y: 0 };
+let drag = false;
+let last = { x: 0, y: 0 };
+let zoomFactor = 1;
+
+c.onmousedown = e => {
+    drag = true;
+    last = { x: e.clientX, y: e.clientY };
+};
+
+onmouseup = () => {
+    drag = false;
+    vel.x *= 0.03125 / 16;
+    vel.y *= 0.03125 / 16;
+};
+
+c.onmousemove = e => {
+    if (!drag) return;
+
+    let dx = e.clientX - last.x;
+    let dy = e.clientY - last.y;
+
+    vel.x += -dx / (cam.z * 32);
+    vel.y += dy / (cam.z * 32);
+
+    last = { x: e.clientX, y: e.clientY };
+};
+
+c.onwheel = e => {
+    e.preventDefault();
+
+    let zoom = Math.exp(e.deltaY * -0.0015); // smooth exponential zoom
+
+    cam.z *= zoom;
+
+    // clamp to insane range
+    cam.z = Math.max(1e-12, Math.min(1e12, cam.z));
+};
+// mobile users' scrolling
+let touches = [];
+
+c.addEventListener("touchstart", (e) => {
+    touches = [...e.touches];
+}, { passive: false });
+
+c.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 1) {
+        // drag (pan)
+        let t = e.touches[0];
+        let prev = touches[0];
+
+        let dx = t.clientX - prev.clientX;
+        let dy = t.clientY - prev.clientY;
+
+        vel.x += -dx / (cam.z * 32);
+        vel.y += dy / (cam.z * 32);
+
+        touches = [...e.touches];
+    }
+
+    if (e.touches.length === 2) {
+        // pinch zoom
+        let t1 = e.touches[0];
+        let t2 = e.touches[1];
+
+        let prev1 = touches[0];
+        let prev2 = touches[1];
+
+        let prevDist = Math.hypot(
+            prev1.clientX - prev2.clientX,
+            prev1.clientY - prev2.clientY
+        );
+
+        let newDist = Math.hypot(
+            t1.clientX - t2.clientX,
+            t1.clientY - t2.clientY
+        );
+
+        let zoom = newDist / prevDist;
+
+        cam.z *= zoom;
+
+        cam.z = Math.max(1e-12, Math.min(1e12, cam.z));
+
+        touches = [...e.touches];
+    }
+}, { passive: false });
+
+c.addEventListener("touchend", () => {
+    touches = [];
+});
+  
+// ================= j = sqrt(a+bi) =================
+function getJ(){
+    let a = parseFloat(document.getElementById("a").value);
+    let b = parseFloat(document.getElementById("b").value);
+
+    // keep j as a direction, not a computed root
+    return { re: 0, im: 1, a: a, b: b };
+}
+  
+// ================= RULES =================
+let algebraRules = [
+    // example rule structure
+    // { lhs: "j*j", rhs: "a + b*j", type: "==" }
+];
+const panel = document.getElementById("algebraPanel");
+const jLabel = document.getElementById("jLabel");
+
+jLabel.onclick = () => {
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+    renderRules();
+};
+function renderRules(){
+    const root = document.getElementById("rules");
+    root.innerHTML = "";
+
+    algebraRules.forEach((r, i) => {
+        const div = document.createElement("div");
+        div.style.margin = "6px 0";
+
+        div.innerHTML = `
+            <input value="${r.lhs}" data-i="${i}" data-k="lhs" style="width:70px">
+            <select data-i="${i}" data-k="type">
+                <option ${r.type==="=="?"selected":""} value="==">=</option>
+                <option ${r.type==="!="?"selected":""} value="!=">≠</option>
+            </select>
+            <input value="${r.rhs}" data-i="${i}" data-k="rhs" style="width:70px">
+        `;
+
+        root.appendChild(div);
+    });
+
+    root.querySelectorAll("input,select").forEach(el=>{
+        el.oninput = (e)=>{
+            const i = +e.target.dataset.i;
+            const k = e.target.dataset.k;
+            algebraRules[i][k] = e.target.value;
+        };
+    });
+}
+document.getElementById("addRuleBtn").onclick = () => {
+    algebraRules.push({ lhs:"j*j", rhs:"-1", type:"==" });
+    renderRules();
+};
+function evalRule(rule, scope){
+    let lhs = math.evaluate(rule.lhs, scope);
+    let rhs = math.evaluate(rule.rhs, scope);
+
+    if(rule.type === "==") return Math.abs(lhs - rhs) < 1e-6;
+    if(rule.type === "!=") return Math.abs(lhs - rhs) > 1e-6;
+}
+function baseConstraint(){
+    let a = parseFloat(document.getElementById("a").value);
+    let b = parseFloat(document.getElementById("b").value);
+
+    return {
+        lhs: "j*j",
+        rhs: `${a} + ${b}*j`,
+        type: "=="
+    };
+}
+function ruleContradictsBase(rule){
+    let base = baseConstraint();
+
+    const scope = {
+        j: math.complex(0,1),
+        a: parseFloat(document.getElementById("a").value),
+        b: parseFloat(document.getElementById("b").value)
+    };
+
+    try{
+        let baseL = math.evaluate(base.lhs, scope);
+        let baseR = math.evaluate(base.rhs, scope);
+
+        let rL = math.evaluate(rule.lhs, scope);
+        let rR = math.evaluate(rule.rhs, scope);
+
+        // only meaningful for equality rules
+        if(rule.type !== "==") return false;
+
+        let baseOk = math.abs(baseL - baseR) < 1e-6;
+        let ruleOk = math.abs(rL - rR) < 1e-6;
+
+        // contradiction = rule disagrees with base behavior of same expression
+        return !ruleOk && rule.lhs === base.lhs;
+
+    } catch(e){
+        return true; // if it breaks parsing, treat as unsafe
+    }
+}
+function resolveSymbol(name, scope){
+    const rules = [...getDefaultRules(), ...algebraRules];
+
+    // last rule wins (true override system)
+    for(let i = rules.length - 1; i >= 0; i--){
+        const r = rules[i];
+
+        if(r.type !== "==") continue;
+
+        if(r.lhs.trim() === name){
+            try {
+                const val = math.evaluate(r.rhs, scope);
+
+                // convert math.js complex -> your format
+                if(math.typeOf(val) === "Complex"){
+                    return { re: val.re, im: val.im };
+                }
+
+                return { re: Number(val), im: 0 };
+            } catch(e){
+                return { re: 0, im: 0 };
+            }
+        }
+    }
+
+    return null;
+}
+function getDefaultRules() {
+    return [
+        { lhs: "a", rhs: document.getElementById("a").value, type: "==" },
+        { lhs: "b", rhs: document.getElementById("b").value, type: "==" }
+    ];
+}
+function getActiveSymbolRules(name){
+    return allRules().filter(r => r.lhs.trim() === name && r.type === "==");
+}
+function isAmbiguous(name){
+    return getActiveSymbolRules(name).length > 1;
+}
+
+// ================= BASIS =================
+function lift(x, y){
+    // treat parametric plane as standard complex plane first
+    return { re: x, im: y };
+}
+function applyAlgebra(z){
+    // identity right now, but THIS is where j-system lives
+
+    let a = parseFloat(document.getElementById("a").value);
+    let b = parseFloat(document.getElementById("b").value);
+
+    // basis deformation matrix interpretation:
+    // 1 -> 1
+    // i -> j (your system)
+
+    return {
+        re: z.re,
+        im: z.im
+    };
+}
+function basisTransform(z){
+    let a = parseFloat(document.getElementById("a").value);
+    let b = parseFloat(document.getElementById("b").value);
+
+    // treat (re, im) as (1, j)
+    // so mapping is identity in coordinates,
+    // but multiplication changes geometry elsewhere
+
+    return { re: z.re, im: z.im };
+}
+function add(z1, z2) {
+  return make(z1.re + z2.re, z1.im + z2.im);
+}
+function sub(z1, z2) {
+  return make(z1.re-z2.re, z1.im-z2.im);
+}
+function mul(z1, z2){
+    let a = parseFloat(document.getElementById("a").value);
+    let b = parseFloat(document.getElementById("b").value);
+
+    return {
+        re: z1.re*z2.re + z1.im*z2.im*a,
+        im: z1.re*z2.im + z1.im*z2.re + z1.im*z2.im*b
+    };
+}
+  
+function inv(z){
+    let a = parseFloat(document.getElementById("a").value);
+    let b = parseFloat(document.getElementById("b").value);
+
+    // norm: z * conjugate-like
+    let denom = z.re*z.re - a*z.im*z.im;
+
+    if(Math.abs(denom) < 1e-8) return make(0,0);
+
+    return {
+        re: z.re / denom,
+        im: -z.im / denom
+    };
+}
+
+function div(z1, z2){
+    return mul(z1, inv(z2));
+}
+  
+function expZ(z){
+    let result = make(1,0);
+    let term = make(1,0);
+
+    for(let n=1; n<30; n++){
+        term = mul(term, z);
+        term = { re: term.re / n, im: term.im / n };
+        result = {
+            re: result.re + term.re,
+            im: result.im + term.im
+        };
+    }
+
+    return result;
+}
+  
+function expBase(b, z){
+    // b^z = exp(z * log(b))
+    return expZ(mul(z, logZ(b)));
+}
+  
+function logZ(z){
+    let a = parseFloat(document.getElementById("a").value);
+
+    let r = Math.sqrt(Math.abs(z.re*z.re - a*z.im*z.im));
+    let theta = Math.atan2(z.im, z.re);
+
+    return make(Math.log(r), theta);
+}
+  
+function logBase(b, z){
+    // log_b(z) = log(z) / log(b)
+    return div(logZ(z), logZ(b));
+}
+
+function gammaReal(x){
+    return math.gamma(x); // fallback for now
+}
+
+function factoReal(x){
+    return math.gamma(x+1); // why the hell not
+}
+  
+// ================= PARSE EXPRESSIONS =================
+const scope = {
+    sin:math.sin,cos:math.cos,tan:math.tan,
+    csc:math.csc,sec:math.sec,cot:math.cot,
+    arcsin:math.asin,arccos:math.acos,arctan:math.atan,
+    arccsc:math.acsc,arcsec:math.asec,arccot:math.acot,
+    sinh:math.sinh,cosh:math.cosh,tanh:math.tanh,
+    csch:math.csch,sech:math.sech,coth:math.coth,
+    arcsinh:math.asinh,acosh:math.acosh,atanh:math.atanh,
+    acsch:math.acsch,asech:math.asech,acoth:math.acoth,
+  
+    sqrt:Math.sqrt,
+    abs:Math.abs,
+    exp:Math.exp,
+    pi:Math.PI,
+    tau:(2*Math.PI),
+    euler:Math.E
+};
+
+function make(re, im){
+    return { re, im };
+}
+function evalExpr(){
+    let expr = document.getElementById("expr").value;
+
+    let a = parseFloat(document.getElementById("a").value);
+    let b = parseFloat(document.getElementById("b").value);
+
+    // define algebra operations
+    const scope = {
+        //j: make(0,1),
+
+        add: (x,y)=>add(x,y),
+        sub: (x,y)=>sub(x,y),
+        mul: (x,y)=>mul(x,y),
+        div: (x,y)=>div(x,y),
+        gamma: (x,y)=>(gammaReal(x),y),
+        expBase: (x,y)=>expBase(x,y),
+        logBase: (x,y)=>logBase(x,y),
+
+        // allow real numbers
+        number: (n)=>make(n,0)
+    };
+
+    // convert expression into function form
+    try{
+        let node = math.parse(expr);
+
+        function evalNode(n){
+            if(n.isConstantNode){
+                return make(parseFloat(n.value),0);
+            }
+
+            if(n.isSymbolNode){
+                const v = resolveSymbol(n.name, scope);
+                if(v) return v;
+
+                if(n.name === "j") return make(0,1); // ONLY fallback if no rule exists
+
+                return make(0,0);
+            }
+
+            if(n.isOperatorNode){
+                let a = evalNode(n.args[0]);
+                let b = evalNode(n.args[1]);
+
+                if(n.op === "+") return scope.add(a,b);
+                if(n.op === "-") return scope.sub(a,b);
+                if(n.op === "*") return scope.mul(a,b);
+                if(n.op === "/") return scope.div(a,b);
+                if(n.op === "^") return scope.expBase(a,b);
+                if(n.op === "_") return scope.logBase(a,b);
+            }
+
+            return make(0,0);
+        }
+
+        return evalNode(node);
+
+    } catch(e){
+        return make(0,0);
+    }
+}
+
+// ================= PARAMETRIC =================
+function parseParam(t){
+    let p=document.getElementById("param").value;
+    scope.t=t;
+
+    try{
+        let parts=p.split(",");
+        let x=math.evaluate(parts[0],scope);
+        let y=math.evaluate(parts[1],scope);
+        return {x:x,y:y};
+    }catch(e){
+        return {x:0,y:0};
+    }
+}
+
+// ================= DRAW =================
+function S(){
+    return parseFloat(document.getElementById("scalein").value);
+}
+qs('#rotatein').addEventListener('input', function() {
+  qs('#canvaswrapper').style.transform = `rotate(${this.value}deg)`;
+  qs('#canvaswrapper').style.zIndex = '0';
+});
+
+function toScreen(x, y) {
+    return {
+        x: c.width / 2 + (x - cam.x) * S() * cam.z,
+        y: c.height / 2 - (y - cam.y) * S() * cam.z
+    };
+}
+
+// ================= GRID + AXES =================
+function niceStep(targetWorldStep){
+    // converts raw step into clean 1, 2, 5 × 10^n
+    let exp = Math.floor(Math.log10(targetWorldStep));
+    let base = targetWorldStep / Math.pow(10, exp);
+
+    let niceBase =
+        base < 1.5 ? 1 :
+        base < 3 ? 2 :
+        base < 7 ? 5 : 10;
+
+    return niceBase * Math.pow(10, exp);
+}
+
+function grid(){
+    ctx.clearRect(0,0,c.width,c.height);
+
+    let scale = S() * cam.z;
+
+    let left   = cam.x - (c.width / 2) / scale;
+    let right  = cam.x + (c.width / 2) / scale;
+    let top    = cam.y + (c.height / 2) / scale;
+    let bottom = cam.y - (c.height / 2) / scale;
+
+    // 👇 key idea: target ~80px spacing no matter zoom
+    let targetPx = 80;
+    let rawStep = targetPx / scale;
+    let step = niceStep(rawStep);
+
+    // snap bounds to chunk grid
+    let startX = Math.floor(left / step) * step;
+    let endX   = Math.ceil(right / step) * step;
+
+    let startY = Math.floor(bottom / step) * step;
+    let endY   = Math.ceil(top / step) * step;
+
+    ctx.strokeStyle = "#1a2233";
+
+    // vertical lines
+    for(let x = startX; x <= endX; x += step){
+        let a = toScreen(x, bottom);
+        let b = toScreen(x, top);
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+    }
+
+    // horizontal lines
+    for(let y = startY; y <= endY; y += step){
+        let a = toScreen(left, y);
+        let b = toScreen(right, y);
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+    }
+
+    // axes
+    ctx.lineWidth = 2;
+
+    let y1 = toScreen(0, bottom), y2 = toScreen(0, top);
+    ctx.strokeStyle = "#6aa0ff";
+    ctx.beginPath();
+    ctx.moveTo(y1.x,y1.y);
+    ctx.lineTo(y2.x,y2.y);
+    ctx.stroke();
+  
+    let x1 = toScreen(left, 0), x2 = toScreen(right, 0);
+    ctx.strokeStyle = "#dd806a";
+    ctx.beginPath();
+    ctx.moveTo(x1.x,x1.y);
+    ctx.lineTo(x2.x,x2.y);
+    ctx.stroke();
+
+    ctx.lineWidth = 1;
+}
+  
+function drawLabels(){
+    ctx.font = "12px monospace";
+
+    let scale = S() * cam.z;
+
+    let left   = cam.x - (c.width / 2) / scale;
+    let right  = cam.x + (c.width / 2) / scale;
+    let top    = cam.y + (c.height / 2) / scale;
+    let bottom = cam.y - (c.height / 2) / scale;
+
+    let targetPx = 80;
+    let step = niceStep(targetPx / scale);
+
+    for(let x = Math.floor(left/step)*step; x <= right; x += step){
+        ctx.fillStyle = "#dd806a";
+        let p = toScreen(x, 0);
+        ctx.fillText(formatNum(x), p.x + 3, p.y - 3);
+    }
+
+    for(let y = Math.floor(bottom/step)*step; y <= top; y += step){
+        ctx.fillStyle = "#6aa0ff";
+        let p = toScreen(0, y);
+        ctx.fillText(formatNum(y), p.x + 3, p.y - 3);
+    }
+}
+
+function formatNum(x){
+    if (!isFinite(x)) return "∞";
+
+    let ax = Math.abs(x);
+
+    // true zero threshold (scale-independent safety)
+    if (ax < 1e-14) return "0";
+
+    // scientific for very small or very large values
+    if (ax < 1e-4 || ax > 1e6) {
+        return x.toExponential(2);
+    }
+
+    // adaptive precision (key idea)
+    // more precision when number is small, less when large
+    let digits =
+        ax < 1 ? 6 :
+        ax < 10 ? 5 :
+        ax < 100 ? 4 :
+        3;
+
+    return Number(x.toPrecision(digits)).toString();
+}
+
+
+// ================= CURVES =================
+function drawPoint(){
+    let z = evalExpr();
+
+    if(!isFinite(z.re) || !isFinite(z.im)) return;
+
+    let p = toScreen(z.re, z.im);
+
+    ctx.fillStyle="#ffcc66";
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,5,0,Math.PI*2);
+    ctx.fill();
+}
+
+function drawParam(){
+    ctx.strokeStyle="#ff6ad5";
+    ctx.beginPath();
+
+    let expr = document.getElementById("param").value;
+    let parts = expr.split(",");
+
+    let first = true;
+
+    for(let t=0; t<6.28318; t+=0.02){
+
+        // --- 1. evaluate param in raw ℝ² ---
+        let scopeT = { t };
+
+        let x = math.evaluate(parts[0], scopeT);
+        let y = math.evaluate(parts[1], scopeT);
+
+        // --- 2. lift into your algebra basis ---
+        let z = { re: x, im: y };
+
+        // --- 3. apply algebra system deformation ---
+        z = applyAlgebra(z); // (you already had this hook idea)
+
+        // --- 4. project to screen ---
+        let s = toScreen(z.re, z.im);
+
+        if(first){
+            ctx.moveTo(s.x, s.y);
+            first = false;
+        } else {
+            ctx.lineTo(s.x, s.y);
+        }
+    }
+
+    ctx.stroke();
+}
+  
+  
+// ================= LOOP =================
+function loop(){
+    // inertia damping
+        cam.x += vel.x;
+        cam.y += vel.y;
+
+        vel.x *= 0.0625 * (zoomFactor / 100);
+        vel.y *= 0.0625 * (zoomFactor / 100);
+    grid();
+    // The stuff actually graphed
+    drawParam();
+    drawPoint();
+    
+    for(let eq of equations){
+      drawImplicit(eq);
+    }
+    
+    // Stuff on top of what's graphen
+    drawLabels();
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+<script>
+  const tabs = document.querySelectorAll(".ribbon-tab");
+const pages = document.querySelectorAll(".page");
+
+let currentPage = "home";
+
+tabs.forEach(t => {
+    t.onclick = () => {
+        const target = t.dataset.page;
+
+        // 🔁 if clicking same tab → close everything
+        if (currentPage === target) {
+            currentPage = null;
+
+            tabs.forEach(x => x.classList.remove("active"));
+            pages.forEach(p => p.classList.remove("active"));
+
+            return;
+        }
+
+        // 🔄 switch to new tab
+        currentPage = target;
+
+        tabs.forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+
+        pages.forEach(p => {
+            p.classList.remove("active");
+            if (p.id === target) p.classList.add("active");
+        });
+    };
+});
+  </script>
+  
+</body>
+</html>
