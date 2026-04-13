@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <title>Algebra Plane Engine v2</title>
-
+<link href='https://aryabhata.aeonic.me/styles/sigma.css' rel='stylesheet' type='text/css'/>
+<script src='https://aryabhata.aeonic.me/styles/sigma.js'></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
 <style>
 html,body{
@@ -22,7 +23,7 @@ html,body{
     height:70px;
     background:#121826;
     background:#12182680;
-    backdrop-filter: url(#crystal-distortion-minus) blur(4px);
+    backdrop-filter: saturate(1.04) url(#crystal-distortion) blur(4px);
     display:flex;
     align-items:center;
     gap:10px;
@@ -44,16 +45,16 @@ html,body{
 }
 
 canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
-  
+  .ribbon-tabs::before{filter:brightness(0.7) saturate(1.5);}
 .ribbon-tabs{
     position:absolute;
-    top:0;
+    top:-3px;
     left:0;
     right:0;
-    height:30px;
+    height:36px;
     background:#0f1420;
     background:#0f1420a0;
-    backdrop-filter: blur(9px) sepia(0.1) url(#crystal-distortion-plus);
+    backdrop-filter: blur(4px) saturate(2) url(#crystal-distortion-plus);
     display:flex;
     align-items:center;
     gap:6px;
@@ -70,6 +71,7 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
     border-radius:4px;
     user-select:none;
     opacity:0.7;
+    display: inline-block;
 }
 
 .ribbon-tab.active{
@@ -88,6 +90,10 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
 .page.active{
     display:flex;
 }
+  .o-bar.page {
+    z-index: 9999; border-radius: 0 0 12px 12px; transform: translateY(-12px); display: none; min-width: 50vw; width: auto; overflow-x: auto; max-width: 95vw;
+  }
+  .o-bar.page.active{display:flex;}
 </style>
 </head>
 
@@ -110,46 +116,50 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
     </filter>
   </defs>
 </svg>
-<div class="ribbon-tabs">
-    <div class="ribbon-tab active" data-page="home">Functions</div>
-    <div class="ribbon-tab" data-page="p1">Viewport</div>
-    <div class="ribbon-tab" data-page="p2">Transformations</div>
-    <div class="ribbon-tab" data-page="p3">Complex Algebras</div>
-</div>
+<center>
+  <div class='ribbon-tabs nav-bar' style='border-radius: 0; width: 100%; min-width: 100vw; z-index: 10000;'>
+    <span>  
+      <div class="ribbon-tab active" data-page="home">Functions</div>
+      <div class="ribbon-tab" data-page="p1">Viewport</div>
+      <div class="ribbon-tab" data-page="p2">Transformations</div>
+      <div class="ribbon-tab" data-page="p3">Complex Algebras</div>
+    </span>
+  </div>
 
-<!-- HOME PAGE (your old toolbar) -->
-<div class="o-bar page active" id="home">
-    <div>f(x,y)=0</div>
-    <input id="eq" value="y - x^2">
-    <button onclick="addEquation()">add</button>
-</div>
+  <!-- HOME PAGE (your old toolbar) -->
+  <div class="o-bar page active nav-bar" id="home">
+      <div>f(x,y)=0</div>
+      <input id="eq" type='text' value="y - x^2">
+      <button onclick="addEquation()">add</button>
+  </div>
 
-<!-- Viewport (just scale+rotation for now lol) -->
-<div class="o-bar page" id="p1">
-  <div>scale</div>
-  <input id="scalein" value="60" type='number' min='0'>
-  
-  <div>rotation</div>
-  <input id="rotatein" value="0" min='-360' max='360' type='number' min='0'>°
-</div>
-  
-<!-- Transformations (with matrices!) -->
-<div class="o-bar page" id="p2">
-  asdf
-</div>
-  
-<!-- Algebras over the Real Numbers -->
-<div class="o-bar page" id="p3">
-  <div id='jLabel' style='cursor: pointer'>j = √(a+bi)</div>
-  <input id="a" value="-1">
-  <input id="b" value="0">
-  
-  <label for='expr'><div>expr z =</div></label>
-  <input id="expr" value="1 + j">
-  
-  <label for='param'><div>param</div></label>
-  <input id="param" value="cos(t), sin(t)">
-</div>
+  <!-- Viewport (just scale+rotation for now lol) -->
+  <div class="o-bar page nav-bar" id="p1">
+    <div>scale</div>
+    <input id="scalein" value="60" type='number' min='0'>
+
+    <div>rotation</div>
+    <input id="rotatein" value="0" min='-360' max='360' type='number' min='0'>°
+  </div>
+
+  <!-- Transformations (with matrices!) -->
+  <div class="o-bar page nav-bar" id="p2">
+    asdf
+  </div>
+
+  <!-- Algebras over the Real Numbers -->
+  <div class="o-bar page nav-bar" id="p3">
+    <div id='jLabel' style='cursor: pointer'>j = √(a+bi)</div>
+    <input id="a" value="-1" type='number'>
+    <input id="b" value="0" type='number'>
+
+    <label for='expr'><div>expr z =</div></label>
+    <input id="expr" type='text' value="1 + j">
+
+    <label for='param'><div>param</div></label>
+    <input id="param" type='text' value="cos(t), sin(t)">
+  </div>
+</center>
   
 <div id="algebraPanel" style="
     position:absolute;
@@ -173,7 +183,7 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
     <div id="rules"></div>
 </div>
 <div id='canvaswrapper' style='position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;'>
-<canvas id="c" style='z-index:-10000;'></canvas>
+<canvas id="c" style='z-index:-10000;' class='non'></canvas>
   </div>
   <!-- Regular function graphing -->
   <script>
