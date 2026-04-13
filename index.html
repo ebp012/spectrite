@@ -756,7 +756,12 @@ function niceStep(targetWorldStep){
     let niceBase =
         base < 1.5 ? 1 :
         base < 3 ? 2 :
-        base < 7 ? 5 : 10;
+        base < 4 ? 3 :
+        base < 5 ? 4 :
+        base < 6 ? 5 :
+        base < 7 ? 6 :
+        base < 8 ? 7 :
+        base < 9 ? 9 : 10;
 
     return niceBase * Math.pow(10, exp);
 }
