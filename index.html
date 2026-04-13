@@ -11,7 +11,6 @@ html,body{
     margin:0;
     height:100%;
     overflow:hidden;
-    background:#0b0e14;
     font-family:monospace;
     z-index: -999999;
 }
@@ -23,10 +22,7 @@ html,body{
     height:70px;
     background:#121826;
     background:#12182680;
-    backdrop-filter: saturate(1.04) url(#crystal-distortion) blur(4px);
-    display:flex;
-    align-items:center;
-    gap:10px;
+    backdrop-filter: saturate(1.04) url(#crystal-distortion-half-plus) blur(4px);
     padding:8px;
     color:#9fb3ff;
     z-index: 99;
@@ -64,6 +60,12 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
     font-size:12px;
     z-index: 100;
 }
+  .ribbon-tabs-tall {
+    flex-direction: column;
+    height: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
 
 .ribbon-tab{
     padding:4px 10px;
@@ -78,8 +80,41 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
     background:#1c2433;
     opacity:1;
 }
+  /* small screens */
+@media screen and (max-width: 640px) {
+  /*.ribbon-tab:not(.active) {
+    display: none
+  }*/
+  .hamburger,.hamburger.active,.hamburger.inactive{display:inline !important; float: right; position: absolute; left: 5px; top: 5px;}
+  .o-bar.page.inactive {display: none !important;}
+  .ribbon-tabs {
+    min-height: 36px;
+    height: auto;
+    max-height: calc(85vh + 6px);
+    overflow-y: auto;
+  }
+  .mobilehidden{display:none !important;}
+  .ribbon-tab:not(.mobilehidden){display:block !important;}
+  .page, .pagecontainer {
+    flex-direction: column;
+    height: auto !important;
+    overflow-y: auto;
+    overflow-x: none;
+    max-height: calc(85vh + 6px) !important;
+  }
+}
+  /* tiny screens */
+  @media screen and (max-width: 380px) {
+    .o-bar.page {width: 100% !important; width: 100vw !important; max-width: 100%; max-width: 100vw !important; border-radius: 0 !important;}
+  }
+  /* bigger screens */
+@media screen and (min-width: 641px) {
+  .hamburger{display:none !important;}
+}
 
-.page{
+  
+  
+.page:not(.non){
     position:absolute;
     top:30px;
     left:0;
@@ -87,22 +122,47 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
     height:70px;
     display:none;
 }
-.page.active{
-    display:flex;
-}
-  .o-bar.page {
-    z-index: 9999; border-radius: 0 0 12px 12px; transform: translateY(-12px); display: none; min-width: 50vw; width: auto; overflow-x: auto; max-width: 95vw;
+  .page:not(.non).active{
+      display:flex;
   }
-  .o-bar.page.active{display:flex;}
+  .o-bar.page {
+    z-index: 9999; border-radius: 0 0 12px 12px; position: fixed; top: 24px; display: none; min-width: 50vw; max-width: 95vw;
+  }
+  .o-bar.page .pagecontainer {display:flex; overflow:auto;display:flex;
+    align-items:center;
+    gap:10px;
+    padding-left: 20px; padding-right: 20px;
+  }
+  .o-bar.page div.spacer {min-height:54px;}
+  .o-bar.page.active {display:flex;}  
+  .hamburger {vertical-align: middle !important;}
+  .hidden{display:none !important;}
+  .shown{display:block !important;}
+  .page.inactive{display:none;}
+  
+  /*sidebar on big big screens*/
+  @media screen and (min-width: 881px) {
+  .o-bar.page{resize: vertical; flex-direction: column !important; border-radius: 0; height: 100%; height: calc(100vh - 24px);width: 8%;width:8vw;min-width:3vw;max-width:auto; bottom: 0;left: 0 !important; right: auto; width: 8%;width:calc(25vw - 15vh) !important;min-width:16vw !important;max-width:70vw !important;}
+    .pagecontainer  {flex-direction:column;} 
+}
+/* background styles */
+  #bgcontainer {
+    background: #0b0e14;
+  }
 </style>
 </head>
 
 <body>
+  <div id='bgcontainer'></div>
 <svg style="position: absolute; width: 0; height: 0;" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="crystal-distortion">
       <feTurbulence baseFrequency="0.008" numOctaves="2" result="turbulence"/>
       <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="9"/>
+    </filter>
+    <filter id="crystal-distortion-half-plus">
+      <feTurbulence baseFrequency="0.008" numOctaves="2" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="40.5"/>
     </filter>
     <filter id="crystal-distortion-plus">
       <feTurbulence baseFrequency="0.008" numOctaves="2" result="turbulence"/>
@@ -117,47 +177,108 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
   </defs>
 </svg>
 <center>
-  <div class='ribbon-tabs nav-bar' style='border-radius: 0; width: 100%; min-width: 100vw; z-index: 10000;'>
-    <span>  
-      <div class="ribbon-tab active" data-page="home">Functions</div>
-      <div class="ribbon-tab" data-page="p1">Viewport</div>
-      <div class="ribbon-tab" data-page="p2">Transformations</div>
-      <div class="ribbon-tab" data-page="p3">Complex Algebras</div>
+  <div class='ribbon-tabs nav-bar' style='border-radius: 0; width: 100%; min-width: 100vw; z-index: 10000;'>  
+        <div class="ribbon-tab hamburger" onclick='tclassa(".ribbon-tab.inactive","mobilehidden");tclass(".ribbon-tabs",".ribbon-tabs-tall");'>☰</div>
+        <span id="active-slot"></span>
+        <span id='menu'>
+          <div class="ribbon-tab active" data-page="home">Functions</div>
+          <div class="ribbon-tab inactive" data-page="p1">Viewport</div>
+          <div class="ribbon-tab inactive" data-page="p2">Transformations</div>
+          <div class="ribbon-tab inactive" data-page="p3">Complex Algebras</div>
     </span>
   </div>
 
   <!-- HOME PAGE (your old toolbar) -->
   <div class="o-bar page active nav-bar" id="home">
+    <span class='pagecontainer'>
       <div>f(x,y)=0</div>
       <input id="eq" type='text' value="y - x^2">
       <button onclick="addEquation()">add</button>
+    </span>
   </div>
 
   <!-- Viewport (just scale+rotation for now lol) -->
   <div class="o-bar page nav-bar" id="p1">
-    <div>scale</div>
-    <input id="scalein" value="60" type='number' min='0'>
+    <span class='pagecontainer'>
+      <div>
+        <label for='scalein'>scale</label>
+        <input id="scalein" value="60" type='number' step='1' min='0'/>
+      </div>
 
-    <div>rotation</div>
-    <input id="rotatein" value="0" min='-360' max='360' type='number' min='0'>°
+      <div>
+        <label for='rotatein'>rotation</label>
+        <input id="rotatein" value="0" min='-360' max='360' type='number' min='0'/><label for='rotatein'>°</label>
+      </div>
+      
+      <div>
+        <label for='theme'>theme</label>
+        <select id='theme' oninput='chooseTheme();'>
+          <option>auto</option>
+          <option>light</option> <!-- background:#f4f1eb; -->
+          <option selected='selected'>dark</option> <!-- background:#0b0e14; -->
+          <option value='pitchblack'>pitch black</option>
+          <option>paper</option>
+          <option>blush</option>
+          <option>coral</option>
+          <option>forest</option>
+        </select>
+        <script>
+          function chooseTheme() {
+            if (qs('#theme').value == 'light') qs('#bgcontainer').style.background = '#f4f1eb';
+            if (qs('#theme').value == 'dark') qs('#bgcontainer').style.background = '#0b0e14';
+            if (qs('#theme').value == 'pitchblack') qs('#bgcontainer').style.background = '#000000';
+            if (qs('#theme').value == 'paper') qs('#bgcontainer').style.background = 'url("https://img.freepik.com/free-photo/old-brown-paper-texture-background_1373-431.jpg")';
+            if (qs('#theme').value == 'blush') qs('#bgcontainer').style.background = '#ffadd3';
+            if (qs('#theme').value == 'coral') qs('#bgcontainer').style.background = '#ffcfa0';
+            if (qs('#theme').value == 'forest') qs('#bgcontainer').style.background = 'url("https://transparenttextures.com/patterns/soft-circle-scales.png")';
+          }
+        </script>
+      </div>
+    </span>
   </div>
 
   <!-- Transformations (with matrices!) -->
-  <div class="o-bar page nav-bar" id="p2">
-    asdf
+  <div class="o-bar page nav-bar" id="p2" style='max-height:70vh; height: auto;'>
+    <span class='pagecontainer'>
+      <table class='matrix'>
+        <thead>
+          <tr>
+            <td></td>
+            <td>î</td>
+            <td>ĵ</td>
+            <td>k̂</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>x</th>
+            <td><input type='number' id='t-ix' step='1' value='1'/></td>
+            <td><input type='number' id='t-iy' step='1' value='1'/></td>
+            <td><input type='number' id='t-iz' step='1' value='0'/></td>
+          </tr>
+          <tr>
+            <th>y</th>
+            <td><input type='number' id='t-jx' step='1' value='0'/></td>
+            <td><input type='number' id='t-jy' step='1' value='1'/></td>
+            <td><input type='number' id='t-jz' step='1' value='0'/></td>
+          </tr>
+      </table>
+    </span>
   </div>
 
   <!-- Algebras over the Real Numbers -->
   <div class="o-bar page nav-bar" id="p3">
-    <div id='jLabel' style='cursor: pointer'>j = √(a+bi)</div>
-    <input id="a" value="-1" type='number'>
-    <input id="b" value="0" type='number'>
+    <span class='pagecontainer'>
+      <div id='jLabel' style='cursor: pointer'>j = √(a+bi)</div>
+      <input id="a" value="-1" type='number'/>
+      <input id="b" value="0" type='number'/>
 
-    <label for='expr'><div>expr z =</div></label>
-    <input id="expr" type='text' value="1 + j">
+      <label for='expr'><div>expr z =</div></label>
+      <input id="expr" type='text' value="1 + j"/>
 
-    <label for='param'><div>param</div></label>
-    <input id="param" type='text' value="cos(t), sin(t)">
+      <label for='param'><div>param</div></label>
+      <input id="param" type='text' value="cos(t), sin(t)"/>
+    </span>
   </div>
 </center>
   
@@ -187,90 +308,7 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
   </div>
   <!-- Regular function graphing -->
   <script>
-    let equations = [];
-
-function addEquation(){
-  let raw = document.getElementById("eq").value.trim();
-  if(!raw) return;
-
-  equations.push({
-    raw,
-    node: math.parse(raw).compile(),
-    index: 0,
-    done: false
-  });
-}
-
-function F(eqObj, x, y){
-  try {
-    return eqObj.node.evaluate({ x, y });
-  } catch {
-    return NaN;
-  }
-}
-const buffer = document.createElement("canvas");
-const bctx = buffer.getContext("2d");
-
-function resizeBuffer(){
-  buffer.width = c.width;
-  buffer.height = c.height;
-}
-resizeBuffer();
-window.addEventListener("resize", resizeBuffer);
-function drawImplicit(eq){
-
-  let scale = S() * cam.z;
-
-  let left   = cam.x - (c.width / 2) / scale;
-  let right  = cam.x + (c.width / 2) / scale;
-  let top    = cam.y + (c.height / 2) / scale;
-  let bottom = cam.y - (c.height / 2) / scale;
-
-  let step = niceStep(1 / scale) * 0.5;
-
-  let cols = Math.ceil((right - left) / step);
-  let rows = Math.ceil((top - bottom) / step);
-
-  let total = cols * rows;
-  let chunk = 800;
-
-  let i = eq.index;
-
-  for(let k = 0; k < chunk && i < total; k++, i++){
-
-    let xIndex = i % cols;
-    let yIndex = (i / cols) | 0;
-
-    let x = left + xIndex * step;
-    let y = bottom + yIndex * step;
-
-    let f  = F(eq, x, y);
-    let fx = F(eq, x + step, y);
-    let fy = F(eq, x, y + step);
-
-    if(!isFinite(f)) continue;
-
-    // TRUE zero crossing (cleaner than sign spam)
-    let hit =
-      Math.abs(f) < step ||
-      (f * fx < 0) ||
-      (f * fy < 0);
-
-    if(hit){
-      let p = toScreen(x, y);
-
-      // draw into buffer, not directly
-      bctx.fillStyle = "#ffcc66";
-      bctx.fillRect(p.x, p.y, 1, 1);
-    }
-  }
-
-  eq.index = i;
-
-  if(eq.index >= total){
-    eq.index = 0;
-  }
-}
+    
   </script>
 <!-- Real and complex number algebras -->
 <script>
@@ -278,10 +316,15 @@ function drawImplicit(eq){
 const qs = s => document.querySelector(s);
 const qg = s => document.getElementById(s);
 const qsa = s => document.querySelectorAll(s);
+const tclass = (sel, cls) => document.querySelector(sel).classList.toggle(cls);
+const tclassa = (sel, cls) => document.querySelectorAll(sel).forEach(el => el.classList.toggle(cls));
 // actually do canvassing stuff
 const c=qg("c");
 const ctx=c.getContext("2d");
-
+var ihat = [1,0];
+var jhat = [0,1];
+//var khat = [0,0];
+  
 function resize(){
     c.width=innerWidth;
     c.height=innerHeight; // originally innerHeight-70
@@ -317,6 +360,7 @@ c.onmousemove = e => {
     vel.y += dy / (cam.z * 32);
 
     last = { x: e.clientX, y: e.clientY };
+    markCameraDirty();
 };
 
 c.onwheel = e => {
@@ -325,9 +369,10 @@ c.onwheel = e => {
     let zoom = Math.exp(e.deltaY * -0.0015); // smooth exponential zoom
 
     cam.z *= zoom;
-
+    qs('#scalein').value *= zoom;
     // clamp to insane range
     cam.z = Math.max(1e-12, Math.min(1e12, cam.z));
+    markCameraDirty();
 };
 // mobile users' scrolling
 let touches = [];
@@ -544,6 +589,14 @@ function applyAlgebra(z){
         im: z.im
     };
 }
+
+function applyBasis(x, y) {
+    return {
+        x: x * ihat[0] + y * jhat[0],
+        y: x * ihat[1] + y * jhat[1]
+    };
+}
+
 function basisTransform(z){
     let a = parseFloat(document.getElementById("a").value);
     let b = parseFloat(document.getElementById("b").value);
@@ -630,6 +683,24 @@ function gammaReal(x){
 
 function factoReal(x){
     return math.gamma(x+1); // why the hell not
+}
+
+function sinSeries(x, terms = 10) {
+    let sinX = 0;
+    for (let n = 0; n < terms; n++) {
+        // Formula: (-1)^n * x^(2n+1) / (2n+1)!
+        let numerator = Math.pow(-1, n) * Math.pow(x, 2 * n + 1);
+        let denominator = factorial(2 * n + 1);
+        sinX += numerator / denominator;
+    }
+    return sinX;
+}
+  
+function factorial(n) {
+    if (n === 0 || n === 1) return 1;
+    let res = 1;
+    for (let i = 2; i <= n; i++) res *= i;
+    return res;
 }
   
 // ================= PARSE EXPRESSIONS =================
@@ -741,9 +812,16 @@ qs('#rotatein').addEventListener('input', function() {
 });
 
 function toScreen(x, y) {
+    // center shift first
+    x -= cam.x;
+    y -= cam.y;
+
+    // APPLY BASIS TRANSFORM
+    const b = applyBasis(x, y);
+
     return {
-        x: c.width / 2 + (x - cam.x) * S() * cam.z,
-        y: c.height / 2 - (y - cam.y) * S() * cam.z
+        x: c.width / 2 + b.x * S() * cam.z,
+        y: c.height / 2 - b.y * S() * cam.z
     };
 }
 
@@ -761,7 +839,8 @@ function niceStep(targetWorldStep){
         base < 6 ? 5 :
         base < 7 ? 6 :
         base < 8 ? 7 :
-        base < 9 ? 9 : 10;
+        base < 9 ? 8 :
+        base < 10 ? 9 : 10;
 
     return niceBase * Math.pow(10, exp);
 }
@@ -941,14 +1020,15 @@ function loop(){
 
         vel.x *= 0.0625 * (zoomFactor / 100);
         vel.y *= 0.0625 * (zoomFactor / 100);
+  
+    
+    //var khat = [qs('#t-kx'),qs('#t-ky')];
     grid();
     // The stuff actually graphed
     drawParam();
     drawPoint();
     
-    for(let eq of equations){
-      drawImplicit(eq);
-    }
+    
     
     // Stuff on top of what's graphen
     drawLabels();
@@ -957,37 +1037,71 @@ function loop(){
 loop();
 </script>
 <script>
-  const tabs = document.querySelectorAll(".ribbon-tab");
-const pages = document.querySelectorAll(".page");
-
+  const tabs = document.querySelectorAll(".ribbon-tab[data-page]");
+const pages = document.querySelectorAll(".o-bar.page.nav-bar");
+window.addEventListener("load", function() {
+  if (window.matchMedia("(max-width: 500px)").matches) {
+  tclassa(".ribbon-tab.inactive","mobilehidden");tclass(".ribbon-tabs",".ribbon-tabs-tall");
+}
+});
 let currentPage = "home";
 
+function setPage(target) {
+    const isClosing = currentPage === target;
+
+    // reset everything first
+    tabs.forEach(t => {
+        t.classList.remove("active");
+        t.classList.add("inactive");
+    });
+
+    pages.forEach(p => {
+        p.classList.remove("active");
+        p.classList.add("inactive");
+    });
+
+    // if clicking same tab → close all
+    if (isClosing) {
+        currentPage = null;
+        return;
+    }
+
+    currentPage = target;
+
+    // activate tab
+    const activeTab = document.querySelector(`.ribbon-tab[data-page="${target}"]`);
+    if (activeTab) {
+        activeTab.classList.add("active");
+        activeTab.classList.remove("inactive");
+    }
+
+    // activate page
+    const activePage = document.getElementById(target);
+    if (activePage) {
+        activePage.classList.add("active");
+        activePage.classList.remove("inactive");
+    }
+
+    // IMPORTANT: collapse mobile menu if open
+    const ribbon = document.querySelector(".ribbon-tabs");
+    ribbon.classList.remove("ribbon-tabs-tall");
+    document.querySelectorAll(".ribbon-tab.mobilehidden")
+        .forEach(t => t.classList.remove("mobilehidden"));
+}
+
+// attach handlers
 tabs.forEach(t => {
-    t.onclick = () => {
-        const target = t.dataset.page;
-
-        // 🔁 if clicking same tab → close everything
-        if (currentPage === target) {
-            currentPage = null;
-
-            tabs.forEach(x => x.classList.remove("active"));
-            pages.forEach(p => p.classList.remove("active"));
-
-            return;
-        }
-
-        // 🔄 switch to new tab
-        currentPage = target;
-
-        tabs.forEach(x => x.classList.remove("active"));
-        t.classList.add("active");
-
-        pages.forEach(p => {
-            p.classList.remove("active");
-            if (p.id === target) p.classList.add("active");
-        });
-    };
+    t.onclick = () => setPage(t.dataset.page);
 });
+  
+  
+  // transformations
+    qsa('.matrix input').addEventListener("input", function () {
+      ihat = [qs('#t-ix'),qs('#t-iy')];
+      jhat = [qs('#t-jx'),qs('#t-jy')];
+    });
+  // screensizewise responsiveness
+    
   </script>
   
 </body>
