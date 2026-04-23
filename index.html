@@ -191,9 +191,15 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
   <!-- HOME PAGE (your old toolbar) -->
   <div class="o-bar page active nav-bar" id="home">
     <span class='pagecontainer'>
-      <div>f(x,y)=0</div>
+      <!--<div>f(x,y)=0</div>
       <input id="eq" type='text' value="y - x^2">
-      <button onclick="addEquation()">add</button>
+      <button onclick="addEquation()">add</button>-->
+      <!--<label for='param'><div>param</div></label>-->
+      <div>
+        <input id="param" type='text' value="cos(t), sin(t)"/>
+        <button onclick='resetGraph();'>🗘 Reset Graph</button>
+        <input id='param1colour' type='color' value='#ff6ad5'/>
+      </div>
     </span>
   </div>
 
@@ -221,7 +227,9 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
           <option>blush</option>
           <option>coral</option>
           <option>forest</option>
+          <option>custom</option>
         </select>
+        <input type='color' class='hidden' id='customtheme' value='#0b0e14'/>
         <script>
           function chooseTheme() {
             if (qs('#theme').value == 'light') qs('#bgcontainer').style.background = '#f4f1eb';
@@ -231,6 +239,12 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
             if (qs('#theme').value == 'blush') qs('#bgcontainer').style.background = '#ffadd3';
             if (qs('#theme').value == 'coral') qs('#bgcontainer').style.background = '#ffcfa0';
             if (qs('#theme').value == 'forest') qs('#bgcontainer').style.background = 'url("https://transparenttextures.com/patterns/soft-circle-scales.png")';
+            // custom-coloured themes
+            if (qs('#theme').value = 'custom') {
+              qs('#customtheme').classList.remove('hidden');
+              qs('#bgcontainer').style.background = qs('#theme').value;
+            }
+            else qs('#customtheme').classList.add('hidden');
           }
         </script>
       </div>
@@ -254,13 +268,11 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
             <th>x</th>
             <td><input type='number' id='t-ix' step='1' value='1'/></td>
             <td><input type='number' id='t-iy' step='1' value='1'/></td>
-            <td><input type='number' id='t-iz' step='1' value='0'/></td>
-          </tr>
+=          </tr>
           <tr>
             <th>y</th>
             <td><input type='number' id='t-jx' step='1' value='0'/></td>
             <td><input type='number' id='t-jy' step='1' value='1'/></td>
-            <td><input type='number' id='t-jz' step='1' value='0'/></td>
           </tr>
       </table>
     </span>
@@ -272,12 +284,12 @@ canvas{width:100%;height:100%;display:block;z-index:-10000000!important;}
       <div id='jLabel' style='cursor: pointer'>j = √(a+bi)</div>
       <input id="a" value="-1" type='number'/>
       <input id="b" value="0" type='number'/>
-
-      <label for='expr'><div>expr z =</div></label>
-      <input id="expr" type='text' value="1 + j"/>
-
-      <label for='param'><div>param</div></label>
-      <input id="param" type='text' value="cos(t), sin(t)"/>
+      
+      <div>
+        <label for='expr'><div>expr z =</div></label>
+        <input id="expr" type='text' value="1 + j"/>
+        <input id='showPoint' checked='checked' type='checkbox'/>
+      </div>
     </span>
   </div>
 </center>
@@ -360,7 +372,6 @@ c.onmousemove = e => {
     vel.y += dy / (cam.z * 32);
 
     last = { x: e.clientX, y: e.clientY };
-    markCameraDirty();
 };
 
 c.onwheel = e => {
@@ -372,7 +383,6 @@ c.onwheel = e => {
     qs('#scalein').value *= zoom;
     // clamp to insane range
     cam.z = Math.max(1e-12, Math.min(1e12, cam.z));
-    markCameraDirty();
 };
 // mobile users' scrolling
 let touches = [];
@@ -684,7 +694,9 @@ function gammaReal(x){
 function factoReal(x){
     return math.gamma(x+1); // why the hell not
 }
-
+function versine(n){
+  return 1-math.sin(n);
+}
 function sinSeries(x, terms = 10) {
     let sinX = 0;
     for (let n = 0; n < terms; n++) {
@@ -705,7 +717,7 @@ function factorial(n) {
   
 // ================= PARSE EXPRESSIONS =================
 const scope = {
-    sin:math.sin,cos:math.cos,tan:math.tan,
+    sin:math.sin,cos:math.cos,tan:math.tan,vsin:versine,
     csc:math.csc,sec:math.sec,cot:math.cot,
     arcsin:math.asin,arccos:math.acos,arctan:math.atan,
     arccsc:math.acsc,arcsec:math.asec,arccot:math.acot,
@@ -730,61 +742,63 @@ function evalExpr(){
 
     let a = parseFloat(document.getElementById("a").value);
     let b = parseFloat(document.getElementById("b").value);
+    
+      // define algebra operations
+      const scope = {
+          //j: make(0,1),
 
-    // define algebra operations
-    const scope = {
-        //j: make(0,1),
+          add: (x,y)=>add(x,y),
+          sub: (x,y)=>sub(x,y),
+          mul: (x,y)=>mul(x,y),
+          div: (x,y)=>div(x,y),
+          gamma: (x,y)=>(gammaReal(x),y),
+          expBase: (x,y)=>expBase(x,y),
+          logBase: (x,y)=>logBase(x,y),
 
-        add: (x,y)=>add(x,y),
-        sub: (x,y)=>sub(x,y),
-        mul: (x,y)=>mul(x,y),
-        div: (x,y)=>div(x,y),
-        gamma: (x,y)=>(gammaReal(x),y),
-        expBase: (x,y)=>expBase(x,y),
-        logBase: (x,y)=>logBase(x,y),
+          // allow real numbers
+          number: (n)=>make(n,0)
+      };
 
-        // allow real numbers
-        number: (n)=>make(n,0)
-    };
+      // convert expression into function form
+      if (qs('#showPoint').checked) {
+        try{
+            let node = math.parse(expr);
 
-    // convert expression into function form
-    try{
-        let node = math.parse(expr);
+            function evalNode(n){
+                if(n.isConstantNode){
+                    return make(parseFloat(n.value),0);
+                }
 
-        function evalNode(n){
-            if(n.isConstantNode){
-                return make(parseFloat(n.value),0);
-            }
+                if(n.isSymbolNode){
+                    const v = resolveSymbol(n.name, scope);
+                    if(v) return v;
 
-            if(n.isSymbolNode){
-                const v = resolveSymbol(n.name, scope);
-                if(v) return v;
+                    if(n.name === "j") return make(0,1); // ONLY fallback if no rule exists
 
-                if(n.name === "j") return make(0,1); // ONLY fallback if no rule exists
+                    return make(0,0);
+                }
+
+                if(n.isOperatorNode){
+                    let a = evalNode(n.args[0]);
+                    let b = evalNode(n.args[1]);
+
+                    if(n.op === "+") return scope.add(a,b);
+                    if(n.op === "-") return scope.sub(a,b);
+                    if(n.op === "*") return scope.mul(a,b);
+                    if(n.op === "/") return scope.div(a,b);
+                    if(n.op === "^") return scope.expBase(a,b);
+                    if(n.op === "_") return scope.logBase(a,b);
+                }
 
                 return make(0,0);
             }
 
-            if(n.isOperatorNode){
-                let a = evalNode(n.args[0]);
-                let b = evalNode(n.args[1]);
+            return evalNode(node);
 
-                if(n.op === "+") return scope.add(a,b);
-                if(n.op === "-") return scope.sub(a,b);
-                if(n.op === "*") return scope.mul(a,b);
-                if(n.op === "/") return scope.div(a,b);
-                if(n.op === "^") return scope.expBase(a,b);
-                if(n.op === "_") return scope.logBase(a,b);
-            }
-
+        } catch(e){
             return make(0,0);
         }
-
-        return evalNode(node);
-
-    } catch(e){
-        return make(0,0);
-    }
+      }
 }
 
 // ================= PARAMETRIC =================
@@ -975,30 +989,39 @@ function drawPoint(){
 }
 
 function drawParam(){
-    ctx.strokeStyle="#ff6ad5";
+    ctx.strokeStyle=qs('#param1colour').value;
     ctx.beginPath();
 
     let expr = document.getElementById("param").value;
     let parts = expr.split(",");
 
+    let scale = S() * cam.z;
+
+    // world bounds (same as grid)
+    let left   = cam.x - (c.width / 1) / scale;
+    let right  = cam.x + (c.width / 1) / scale;
+
+    // 🔥 choose t-range based on visible width
+    let tMin = left;
+    let tMax = right;
+
+    // resolution based on zoom (constant pixel density)
+    let steps = c.width; // ~1 sample per pixel
+    let dt = (tMax - tMin) / steps;
+
     let first = true;
 
-    for(let t=0; t<6.28318; t+=0.02){
+    for(let t = tMin; t <= tMax; t += dt){
 
-        // --- 1. evaluate param in raw ℝ² ---
         let scopeT = { t };
 
         let x = math.evaluate(parts[0], scopeT);
         let y = math.evaluate(parts[1], scopeT);
 
-        // --- 2. lift into your algebra basis ---
-        let z = { re: x, im: y };
-
-        // --- 3. apply algebra system deformation ---
-        z = applyAlgebra(z); // (you already had this hook idea)
-
-        // --- 4. project to screen ---
+        let z = applyAlgebra({ re: x, im: y });
         let s = toScreen(z.re, z.im);
+
+        if(!isFinite(s.x) || !isFinite(s.y)) continue;
 
         if(first){
             ctx.moveTo(s.x, s.y);
@@ -1101,7 +1124,24 @@ tabs.forEach(t => {
       jhat = [qs('#t-jx'),qs('#t-jy')];
     });
   // screensizewise responsiveness
-    
+  // Reset Graph
+  function resetGraph(){
+    // reset camera
+    cam.x = 0;
+    cam.y = 0;
+    cam.z = 1;
+
+    // reset velocity
+    vel.x = 0;
+    vel.y = 0;
+
+    // reset UI inputs (optional but recommended)
+    qs('#scalein').value = 60;
+
+    // clear canvas immediately
+    ctx.clearRect(0, 0, c.width, c.height);
+    loop();
+}
   </script>
   
 </body>
